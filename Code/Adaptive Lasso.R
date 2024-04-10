@@ -10,22 +10,21 @@ data("BostonHousing")
 
 
 
-ridge_regression <- function(data, target_column, 
+ridge_regression <- function(X, Y, 
                              family = gaussian(), lambda_seq = 10^seq(3, -3, by = -.1), 
                              type.measure = "default", seed = 1){
   set.seed(seed)
   
-  if (class(target_column) != "character"){
-    stop("The target column should be specified as a character")
+  if (is.matrix(X)) {
+    X = as.data.frame(X)
   }
   
-  # Extract covariates and target
-  X <- data.matrix(data[, -which(names(data) == target_column)])
-  y <- data.matrix(data[, which(names(data) == target_column)])
-  
+  if (typeof(Y) == 'list'){
+    Y <- Y[[1]]
+  }
   
   # Fit the ridge regression using cross validation to obtain best lambda value
-  ridge_cv <- cv.glmnet(X, y, 
+  ridge_cv <- cv.glmnet(X, Y, 
                         alpha = 0, 
                         lambda = lambda_seq, 
                         family = family, 
@@ -45,20 +44,21 @@ ridge_regression <- function(data, target_column,
 
 
 
-ols_regression <- function(data, target_column, family = gaussian()){
+ols_regression <- function(X, Y, family = gaussian()){
   
-  X <- colnames(data[colnames(data) != target_column])
+  if (is.matrix(X)) {
+    X = as.data.frame(X)
+  }
   
-  # Construct formula for OLS regression
-  formula <- as.formula(paste(target_column, "~", paste(X, collapse = "+")))
+  if (typeof(Y) == 'list'){
+    Y <- Y[[1]]
+  }
   
   # Fit OLS regression model
-  ols_model <- glm(formula, data = data, family = family)
+  ols_model <- glm(Y ~ ., data = X, family = family)
 
   return(ols_model)
 }
-
-
 
 
 
@@ -74,7 +74,7 @@ ols_regression <- function(data, target_column, family = gaussian()){
 #' @param gamma_seq sequence of gamma values for cross validation (double)
 #' @return adaptive lasso and key characteristics
 
-adaptive_lasso <- function(data, target_column, regression_method, family = gaussian(), 
+adaptive_lasso <- function(X, Y, regression_method, family = gaussian(), 
                            type.measure = "default", nfolds = 10, lambda_seq = 10^seq(3, -3, by = -.1), 
                            gamma_seq = seq(0.1,3,0.25), seed = 1,...){
   
@@ -84,9 +84,9 @@ adaptive_lasso <- function(data, target_column, regression_method, family = gaus
   #-----------Running initial regression-------------
   
   if (regression_method == 'ols'){
-    initial_regression <- ols_regression(data, target_column, family = family)
+    initial_regression <- ols_regression(X, Y, family = family)
   } else if (regression_method == 'ridge'){
-    initial_regression <- ridge_regression(data, target_column, family = family)
+    initial_regression <- ridge_regression(X, Y, family = family)
   } else {
     stop("Invalid regression method. Choose between ols or ridge")
   }
@@ -146,7 +146,53 @@ adaptive_lasso <- function(data, target_column, regression_method, family = gaus
               "cv.result" = cv_result_df))
 }
 
-adap_lasso <- adaptive_lasso(BostonHousing, 'medv', regression_method = 'ols')
+adap_lasso_output <- adaptive_lasso(BostonHousing, 'medv', regression_method = 'ols')
+
+adap_lasso <- adap_lasso$adaptive_lasso
+
+pred <- predict(adap_lasso, newx = data.matrix(cbind(1, BostonHousing[, -which(names(BostonHousing) == 'medv')])))
+
+
+
+
+
+
+
+
+#Adaptive lasso for SuperLearner
+
+adaptive_lasso(data, target_column, regression_method, family, 
+               type.measure, nfolds, lambda_seq, gamma_seq, seed, ...)
+
+SL.adaptive_lasso <- function(Y, X, newX, family, re){
+  
+}
+
+
+function (Y, X, newX, family, obsWeights, model = TRUE, ...) 
+{
+  if (is.matrix(X)) {
+    X = as.data.frame(X)
+  }
+  fit <- stats::lm(Y ~ ., data = X, weights = obsWeights, model = model)
+  if (is.matrix(newX)) {
+    newX = as.data.frame(newX)
+  }
+  pred <- predict(fit, newdata = newX, type = "response")
+  if (family$family == "binomial") {
+    pred = pmin(pmax(pred, 0), 1)
+  }
+  fit <- list(object = fit, family = family)
+  class(fit) <- "SL.lm"
+  out <- list(pred = pred, fit = fit)
+  return(out)
+}
+
+
+
+
+
+
 best_adaptive_weights <- adap_lasso$best_adaptive_weights
 own_lasso_beta <- adap_lasso$adaptive_lasso$beta
 
