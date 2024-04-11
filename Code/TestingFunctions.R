@@ -4,6 +4,7 @@ data(BostonHousing)
 X_boston <- data.matrix(BostonHousing[,colnames(BostonHousing) != 'medv'])
 Y_boston <- data.matrix(BostonHousing[,colnames(BostonHousing) == 'medv'])
 
+
 rr_boston <- ridge_regression(X_boston, Y_boston)
 ols_boston <- ols_regression(X_boston, Y_boston)
 adap_lasso_boston <- adaptive_lasso(X_boston, Y_boston, regression_method = 'ridge')
@@ -23,34 +24,41 @@ mean((adap_lasso_boston_pred - Y_boston)^2)
 
 
 
-data("Titanic")
-Titanic <- data.frame(Titanic)
-
-X_titanic <- data.matrix(Titanic[,colnames(Titanic) != 'Survived'])
-Y_titanic <- Titanic[,colnames(Titanic) == 'Survived']
+SuperLearner(Y = Y_boston, X = data.frame(X_boston), newX = X_boston, SL.library = c('SL.ridge', 'SL.adaptive.lasso', 'SL.xgboost', 'SL.lm'))
 
 
+SL.adaptive.lasso()
 
 
+data(iris)
 
 
-rr_titanic <- ridge_regression(X_titanic, Y_titanic, family = 'binomial')
-ols_titanic <- ols_regression(X_titanic, Y_titanic, family = 'binomial')
-adap_lasso_titanic <- adaptive_lasso(X_titanic, Y_titanic, family = 'binomial', regression_method = 'ridge', nfolds = 10, gamma_seq = c(0.5), lambda_seq = c(0.00001, 0.000011))
+X_iris <- data.matrix(iris[,colnames(iris) != 'Species'])
+Y_iris <- (iris[,colnames(iris) == 'Species'] == 'versicolor')
 
-adap_lasso_titanic$adaptive_lasso$beta
 
-rr_titanic_pred <- predict(rr_titanic, newx = X_titanic, type = 'response') > 0.5
-ols_titanic_pred <- predict(ols_titanic, newdata = data.frame(X_titanic), type = 'response') > 0.5
-adap_lasso_titanic_pred <- predict(adap_lasso_titanic$adaptive_lasso, newx = X_titanic, type = 'response') > 0.5
-
-gl_ols <- glm(Y_titanic ~ X_titanic - 1, family = binomial())
+class(Y_iris)
 
 
 
+rr_iris <- ridge_regression(X_iris, Y_iris, family = 'binomial')
+ols_iris <- ols_regression(X_iris, Y_iris, family = 'binomial')
+adap_lasso_iris <- adaptive_lasso(X_iris, Y_iris, family = 'binomial', regression_method = 'ridge', 
+                                  nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.05))
+
+adap_lasso_iris$adaptive_lasso$beta
+
+rr_iris_pred <- predict(rr_iris, newx = X_iris, type = 'response') > 0.5
+ols_iris_pred <- predict(ols_iris, newdata = data.frame(X_iris), type = 'response') > 0.5
+adap_lasso_iris_pred <- predict(adap_lasso_iris$adaptive_lasso, newx = X_iris, type = 'response') > 0.5
 
 
+View(cbind(rr_iris_pred, ols_iris_pred, adap_lasso_iris_pred, Y_iris))
 
+
+sum(rr_iris_pred == Y_iris)/length(rr_iris_pred)
+sum(ols_iris_pred == Y_iris)/length(ols_iris_pred)
+sum(adap_lasso_iris_pred == Y_iris)/length(adap_lasso_iris_pred)
 
 
 

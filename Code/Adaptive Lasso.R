@@ -1,15 +1,34 @@
 library(glmnet)
 library(mlbench)
 library(caret)
-#library(gcdnet)
+library(xgboost)
+library(mltools)
+library(data.table)
+library(tidyverse)
+library(xgboost)
+
+
+###########################################
+#       R code for Adaptive Lasso         #
+#                                         #
+#                                         #
+#                                         #
+#                                         #
+#                                         #
+#                                         #
+#                                         #
+#                                         #
+###########################################
+
 
 
 
 #-------------------Ridge regression--------------------------
 
 ridge_regression <- function(X, Y, 
-                             family = gaussian(), lambda_seq = 2^seq(3, -3, by = -.1), 
-                             type.measure = "default", seed = 1){
+                             family = gaussian(), 
+                             lambda_seq = 10^seq(3, -3, by = -.1), 
+                             seed = 1){
   set.seed(seed)
   
   
@@ -22,12 +41,11 @@ ridge_regression <- function(X, Y,
   }
   
 
-  # Fit the ridge regression using cross validation to obtain best lambda value
+  # Apply cross validation to obtain best lambda value
   ridge_cv <- cv.glmnet(X, Y, 
                         alpha = 0, 
-                        lambda = lambda_seq, 
                         family = family, 
-                        type.measure = type.measure,
+                        lambda = lambda_seq, 
                         standardize = TRUE, #standardize dataset
                         intercept = FALSE)  #remove intercept
   
@@ -72,7 +90,9 @@ ols_regression <- function(X, Y, family = gaussian()){
 
 
 
-#---------------------Adaptive lasso------------------------
+##############################################################
+#                     Adaptive lasso                         #
+##############################################################
 
 
 
@@ -90,7 +110,7 @@ ols_regression <- function(X, Y, family = gaussian()){
 
 adaptive_lasso <- function(X, Y, regression_method, family = gaussian(), 
                            nfolds = 10, lambda_seq = 1.5^seq(3, -3, by = -.1), 
-                           gamma_seq = seq(0.1,1.5,0.25), seed = 1,...){
+                           gamma_seq = seq(0.1,5,0.25), seed = 1,...){
   
   set.seed(seed)
   
@@ -113,8 +133,10 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     initial_regression_coefs <- initial_regression$beta
     
     writeLines("Done")
+  } else if (regression_method == 'adaptive_weights'){
+    
   } else {
-    stop("Invalid regression method. Choose between ols or ridge")
+    stop("Invalid regression method. Choose between ols, ridge or adaptive_weights")
   }
   
   writeLines(paste0("Number of covariates: ", ncol(X)))
@@ -131,12 +153,17 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   #X <- data.matrix(cbind(1, X)) #cbind(1,...) to account for intercept
   
 
+  
+  writeLines(paste0("Running ", nfolds,"-fold cross validation to tune gamma and lambda parameter in adaptive lasso for ", 
+                    length(gamma_seq), ' x ', length(lambda_seq),' = ',length(gamma_seq) * length(lambda_seq), ' different parameter combinations'))
+  
+  
+  
   # Running cross-validation to tune gamma and lambda
   cv_result_df <- data.frame(col1 = numeric(0),col2 = numeric(0),col3 = numeric(0))
-  
-  
-  writeLines(paste0("Running ", nfolds,"-fold cross validation to tune gamma and lambda parameter in adaptive lasso"))
-  
+
+  x <- 0  
+
   for (gamma in gamma_seq){
     
     #Calculate adaptive weights for current gamma value
@@ -153,9 +180,12 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     
     #Storing cross validation result
     cv_result_df <- rbind(cv_result_df, c(cv.lasso$lambda.min, min(cv.lasso$cvm), gamma))
+    
+    x <- x + 1
+    
+    progress(x = x, max = length(gamma_seq))
+    
   }
-  
-  writeLines("Cross validation done")
   
   #Renaming cv_result_df
   colnames(cv_result_df) <- c("lambda.min", "cvm", "gamma")
@@ -167,10 +197,12 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   best_gamma <- cv_result_df$gamma[best_index]
   best_adaptive_weights <- 1/(abs(initial_regression_coefs)^best_gamma)
   
+  writeLines("Cross validation done")
   writeLines(c(paste("Best parameters found"), paste0('Gamma: ', best_gamma), paste0('Lambda: ', best_lambda)))
   
+  
   #Fitting final adaptive lasso using best lambda and best adaptive weights from cross validation
-  best_adaptive_lasso <- glmnet(X, Y, family = family, alpha = 1, 
+  best_adaptive_lasso <- glmnet(x = X, y = Y, family = family, alpha = 1, 
                                 lambda = best_lambda, 
                                 penalty.factor = best_adaptive_weights,
                                 standardize = TRUE)
@@ -187,37 +219,6 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
 
 
 
-#Adaptive lasso for SuperLearner
-
-SL.adaptive_lasso <- function(Y, X, newX, regression_method = 'ols', family = gaussian(), 
-                              predict_type = "response", type.measure = 'default', nfolds = 10, 
-                              lambda_seq = 2^seq(3, -3, by = -.1), 
-                              gamma_seq = seq(0.1,1.5,0.25), 
-                              seed = 1,...){
-  
-  if (is.data.frame(X)) {
-    X = data.matrix(X)
-  }
-  
-  fit.adaptive.lasso <- adaptive_lasso(X = X, Y = Y, 
-                                       regression_method = regression_method,
-                                       family = family,
-                                       type.measure = type.measure,
-                                       nfolds = nfolds,
-                                       lambda_seq = lambda_seq,
-                                       gamma_seq = gamma_seq,
-                                       seed = seed)
-  
-  if (is.data.frame(newX)) {
-    newX = data.matrix(newX)
-  }
-  
-  pred <- predict(fit.adaptive.lasso, newx = cbind(1, newX), type = predict_type)
-  
-  fit <- list(object = fit.adaptive.lasso, family = family)
-  class(fit) <- "SL.adaptive.lasso"
-  out <- list(pred = pred, fit = fit)
-}
 
 
 
