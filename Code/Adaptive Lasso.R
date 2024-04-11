@@ -55,7 +55,11 @@ ridge_regression <- function(X, Y,
   
   
   #Fitting final model
-  best_ridge <- glmnet(X, Y, alpha = 0, family = family, lambda = best_lambda, standardize=TRUE, intercept = FALSE)
+  best_ridge <- glmnet(X, Y, 
+                       alpha = 0, 
+                       family = family, 
+                       lambda = best_lambda, 
+                       standardize=TRUE)
   
   return(best_ridge)
 }
@@ -131,7 +135,7 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     initial_regression <- ridge_regression(X, Y, family = family)
     
     # Extract coefficients from initial regression
-    initial_regression_coefs <- initial_regression$beta[-1]
+    initial_regression_coefs <- coef(initial_regression)[-1]
     print(initial_regression_coefs)
     
     writeLines("Done")
@@ -151,33 +155,29 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   
   #---------------Fitting adaptive lasso---------------
   
-  # Divide data into target and covariates (think about what to do with intercept/categorical variables)
-  #X <- data.matrix(cbind(1, X)) #cbind(1,...) to account for intercept
   
-
   
   writeLines(paste0("Running ", nfolds,"-fold cross validation to tune gamma and lambda parameter in adaptive lasso for ", 
-                    length(gamma_seq), ' x ', length(lambda_seq),' = ',length(gamma_seq) * length(lambda_seq), ' different parameter combinations'))
+                    length(gamma_seq), ' x ', length(lambda_seq),' = ',
+                    length(gamma_seq) * length(lambda_seq), ' different parameter combinations'))
   
   
   
   # Running cross-validation to tune gamma and lambda
   cv_result_df <- data.frame(col1 = numeric(0),col2 = numeric(0),col3 = numeric(0))
-
-  x <- 0  
+  
+  x <- 0  #For cross validation progress
 
   for (gamma in gamma_seq){
     
     #Calculate adaptive weights for current gamma value
     
     if (regression_method == 'adaptive_weights'){
-      adaptive_weights <- adaptive.weights(X, Y, nu = gamma, weight.method = c("univariate"))
+      adaptive_weights <- adaptive.weights(X, Y, nu = gamma, weight.method = "univariate")$weights
     } else {
       adaptive_weights <- 1/(abs(initial_regression_coefs)^gamma)
     }
     
-    
-    #print(adaptive_weights)
     
     #Run cross validation with current adaptive weights and differenct lambda values
     cv.lasso <- cv.glmnet(x = X, y = Y, alpha = 1,
@@ -189,6 +189,8 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     #Storing cross validation result
     cv_result_df <- rbind(cv_result_df, c(cv.lasso$lambda.min, min(cv.lasso$cvm), gamma))
     
+    
+    #For tracking progress
     x <- x + 1
     
     progress(x = x, max = length(gamma_seq))
@@ -203,7 +205,13 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   best_index <- which.min(cv_result_df$cvm)
   best_lambda <- cv_result_df$lambda.min[best_index]
   best_gamma <- cv_result_df$gamma[best_index]
-  best_adaptive_weights <- 1/(abs(initial_regression_coefs)^best_gamma)
+  
+  if (regression_method == 'adaptive_weights'){
+    best_adaptive_weights <- adaptive.weights(X, Y, nu = best_gamma, weight.method = "univariate")$weights
+  } else {
+    best_adaptive_weights <- 1/(abs(initial_regression_coefs)^best_gamma)
+  }
+  
   
   writeLines("Cross validation done")
   writeLines(c(paste("Best parameters found"), paste0('Gamma: ', best_gamma), paste0('Lambda: ', best_lambda)))

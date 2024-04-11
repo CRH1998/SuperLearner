@@ -7,7 +7,8 @@ Y_boston <- data.matrix(BostonHousing[,colnames(BostonHousing) == 'medv'])
 
 rr_boston <- ridge_regression(X_boston, Y_boston)
 ols_boston <- ols_regression(X_boston, Y_boston)
-adap_lasso_boston <- adaptive_lasso(X_boston, Y_boston, regression_method = 'ridge')
+adap_lasso_boston <- adaptive_lasso(X_boston, Y_boston, regression_method = 'adaptive_weights', 
+                                    lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.25))
 
 
 rr_boston_pred <- predict(rr_boston, newx = X_boston)
@@ -22,26 +23,25 @@ mean((ols_boston_pred - Y_boston)^2)
 mean((adap_lasso_boston_pred - Y_boston)^2)
 
 
-
-
 SuperLearner(Y = Y_boston, X = data.frame(X_boston), newX = X_boston, SL.library = c('SL.ridge', 'SL.adaptive.lasso', 'SL.xgboost', 'SL.lm'))
+
+
+
 
 
 data(iris)
 
-
 X_iris <- data.matrix(iris[,colnames(iris) != 'Species'])
-Y_iris <- (iris[,colnames(iris) == 'Species'] == 'versicolor')
+Y_iris <- as.numeric((iris[,colnames(iris) == 'Species'] == 'versicolor'))
 
-SuperLearner(Y = Y_iris, X = data.frame(X_iris), newX = X_iris, family = 'binomial' SL.library = c('SL.ridge', 'SL.adaptive.lasso', 'SL.xgboost', 'SL.lm'))
+SuperLearner(Y = Y_iris, X = data.frame(X_iris), newX = X_iris, family = 'binomial', SL.library = c('SL.ridge', 'SL.adaptive.lasso', 'SL.xgboost', 'SL.lm'))
 
 
 rr_iris <- ridge_regression(X_iris, Y_iris, family = 'binomial')
 ols_iris <- ols_regression(X_iris, Y_iris, family = 'binomial')
-adap_lasso_iris <- adaptive_lasso(X_iris, Y_iris, family = 'binomial', regression_method = 'ridge', 
+adap_lasso_iris <- adaptive_lasso(X_iris, Y_iris, family = 'binomial', regression_method = 'adaptive_weights', 
                                   nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.05))
 
-adap_lasso_iris$adaptive_lasso$beta
 
 rr_iris_pred <- predict(rr_iris, newx = X_iris, type = 'response') > 0.5
 ols_iris_pred <- predict(ols_iris, newdata = data.frame(X_iris), type = 'response') > 0.5
