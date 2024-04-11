@@ -27,18 +27,13 @@ mean((adap_lasso_boston_pred - Y_boston)^2)
 SuperLearner(Y = Y_boston, X = data.frame(X_boston), newX = X_boston, SL.library = c('SL.ridge', 'SL.adaptive.lasso', 'SL.xgboost', 'SL.lm'))
 
 
-SL.adaptive.lasso()
-
-
 data(iris)
 
 
 X_iris <- data.matrix(iris[,colnames(iris) != 'Species'])
 Y_iris <- (iris[,colnames(iris) == 'Species'] == 'versicolor')
 
-
-class(Y_iris)
-
+SuperLearner(Y = Y_iris, X = data.frame(X_iris), newX = X_iris, family = 'binomial' SL.library = c('SL.ridge', 'SL.adaptive.lasso', 'SL.xgboost', 'SL.lm'))
 
 
 rr_iris <- ridge_regression(X_iris, Y_iris, family = 'binomial')

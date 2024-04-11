@@ -6,6 +6,7 @@ library(mltools)
 library(data.table)
 library(tidyverse)
 library(xgboost)
+library(MESS)
 
 
 ###########################################
@@ -46,8 +47,7 @@ ridge_regression <- function(X, Y,
                         alpha = 0, 
                         family = family, 
                         lambda = lambda_seq, 
-                        standardize = TRUE, #standardize dataset
-                        intercept = FALSE)  #remove intercept
+                        standardize = TRUE) #standardize dataset
   
   
   # Best lambda value
@@ -78,7 +78,7 @@ ols_regression <- function(X, Y, family = gaussian()){
   }
   
   # Fit OLS regression model
-  ols_model <- glm(Y ~ . - 1, data = X, family = family) #-1 removes intercept
+  ols_model <- glm(Y ~ ., data = X, family = family) #-1 removes intercept
 
   return(ols_model)
 }
@@ -106,7 +106,7 @@ ols_regression <- function(X, Y, family = gaussian()){
 #' @param nfolds number of cross validation folds (double)
 #' @param lambda_seq sequence of lambda values for cross validation (double)
 #' @param gamma_seq sequence of gamma values for cross validation (double)
-#' @return adaptive lasso and key characteristics
+#' @return adaptive lasso and key characteristics (list)
 
 adaptive_lasso <- function(X, Y, regression_method, family = gaussian(), 
                            nfolds = 10, lambda_seq = 1.5^seq(3, -3, by = -.1), 
@@ -122,7 +122,8 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     initial_regression <- ols_regression(X, Y, family = family)
     
     # Extract coefficients from initial regression
-    initial_regression_coefs <- coef(initial_regression)
+    initial_regression_coefs <- coef(initial_regression)[-1]
+    print(initial_regression_coefs)
     
     writeLines("Done")
   } else if (regression_method == 'ridge'){
@@ -130,11 +131,12 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     initial_regression <- ridge_regression(X, Y, family = family)
     
     # Extract coefficients from initial regression
-    initial_regression_coefs <- initial_regression$beta
+    initial_regression_coefs <- initial_regression$beta[-1]
+    print(initial_regression_coefs)
     
     writeLines("Done")
   } else if (regression_method == 'adaptive_weights'){
-    
+    initial_regression_coefs <- NA
   } else {
     stop("Invalid regression method. Choose between ols, ridge or adaptive_weights")
   }
@@ -167,7 +169,13 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   for (gamma in gamma_seq){
     
     #Calculate adaptive weights for current gamma value
-    adaptive_weights <- 1/(abs(initial_regression_coefs)^gamma)
+    
+    if (regression_method == 'adaptive_weights'){
+      adaptive_weights <- adaptive.weights(X, Y, nu = gamma, weight.method = c("univariate"))
+    } else {
+      adaptive_weights <- 1/(abs(initial_regression_coefs)^gamma)
+    }
+    
     
     #print(adaptive_weights)
     
