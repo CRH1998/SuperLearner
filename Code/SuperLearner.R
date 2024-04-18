@@ -6,12 +6,6 @@ library(randomForest)
 library(ggplot2)
 library(tidyr)
 
-
-
-#Listing available models
-listWrappers()
-
-
 ########################################################
 # R code for Adaptive Lasso for SuperLearner package   #
 #                                                      #

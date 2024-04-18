@@ -67,7 +67,7 @@ one_hot_encode_categorical <- function(data, remove_intercept = T){
 
 
 
-
+# Function for visualizing progress in for loop
 progress <- function (x, max = 100) {
   percent <- x / max * 100
   cat(sprintf('\r[%-50s] %d%%',

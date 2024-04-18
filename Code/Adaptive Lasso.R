@@ -7,6 +7,8 @@ library(data.table)
 library(tidyverse)
 library(xgboost)
 library(MESS)
+library(kernlab)
+library(readr)
 
 
 ###########################################
@@ -82,7 +84,7 @@ ols_regression <- function(X, Y, family = gaussian()){
   }
   
   # Fit OLS regression model
-  ols_model <- glm(Y ~ ., data = X, family = family) #-1 removes intercept
+  ols_model <- glm(Y ~ ., data = X, family = family)
 
   return(ols_model)
 }
@@ -121,35 +123,44 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   
   #-----------Running initial regression-------------
   
-  if (regression_method == 'ols'){
-    writeLines("Running ols regression for initial beta estimates")
-    initial_regression <- ols_regression(X, Y, family = family)
-    
-    # Extract coefficients from initial regression
-    initial_regression_coefs <- coef(initial_regression)[-1]
-    print(initial_regression_coefs)
-    
-    writeLines("Done")
-  } else if (regression_method == 'ridge'){
-    writeLines("Running ridge regression for initial beta estimates")
-    initial_regression <- ridge_regression(X, Y, family = family)
-    
-    # Extract coefficients from initial regression
-    initial_regression_coefs <- coef(initial_regression)[-1]
-    print(initial_regression_coefs)
-    
-    writeLines("Done")
-  } else if (regression_method == 'adaptive_weights'){
-    initial_regression_coefs <- NA
+  
+  if(ncol(X) > nrow(X)){
+    writeLines("Warning: Number of coefficients is greater than number of rows. Using adaptive.weights() to find adaptive weigths.")
+    initial_regression <- NA
   } else {
-    stop("Invalid regression method. Choose between ols, ridge or adaptive_weights")
+    
+    if (regression_method == 'ols'){
+      writeLines("Running ols regression for initial beta estimates")
+      initial_regression <- ols_regression(X, Y, family = family)
+      
+      # Extract coefficients from initial regression
+      initial_regression_coefs <- coef(initial_regression)[-1]
+      #print(initial_regression_coefs)
+      
+      writeLines("Done")
+    } else if (regression_method == 'ridge'){
+      writeLines("Running ridge regression for initial beta estimates")
+      initial_regression <- ridge_regression(X, Y, family = family)
+      
+      # Extract coefficients from initial regression
+      initial_regression_coefs <- coef(initial_regression)[-1]
+      #print(initial_regression_coefs)
+      
+      writeLines("Done")
+    } else if (regression_method == 'adaptive_weights'){
+      initial_regression <- NA
+    } else {
+      stop("Invalid regression method. Choose between ols, ridge or adaptive_weights")
+    }
   }
   
-  writeLines(paste0("Number of covariates: ", ncol(X)))
-  writeLines(paste0("Number of estimated regression coefficients: ",length(initial_regression_coefs)))
+  #writeLines(paste0("Number of covariates: ", ncol(X)))
+  #writeLines(paste0("Number of estimated regression coefficients: ",length(initial_regression_coefs)))
   
   
   #----------------------------------------------------
+  
+  
   
   
   
@@ -172,7 +183,7 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     
     #Calculate adaptive weights for current gamma value
     
-    if (regression_method == 'adaptive_weights'){
+    if (regression_method == 'adaptive_weights' | ncol(X) > nrow(X)){
       adaptive_weights <- adaptive.weights(X, Y, nu = gamma, weight.method = "univariate")$weights
     } else {
       adaptive_weights <- 1/(abs(initial_regression_coefs)^gamma)
@@ -187,7 +198,7 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
                           penalty.factor = adaptive_weights)
     
     #Storing cross validation result
-    cv_result_df <- rbind(cv_result_df, c(cv.lasso$lambda.min, min(cv.lasso$cvm), gamma))
+    cv_result_df <- rbind(cv_result_df, c(cv.lasso$lambda.min, gamma, min(cv.lasso$cvm)))
     
     
     #For tracking progress
@@ -198,7 +209,7 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   }
   
   #Renaming cv_result_df
-  colnames(cv_result_df) <- c("lambda.min", "cvm", "gamma")
+  colnames(cv_result_df) <- c("lambda.min", "gamma", "cvm")
   
   
   #Retrieving best values from cross validation
@@ -213,8 +224,8 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   }
   
   
-  writeLines("Cross validation done")
-  writeLines(c(paste("Best parameters found"), paste0('Gamma: ', best_gamma), paste0('Lambda: ', best_lambda)))
+  #writeLines("Cross validation done")
+  #writeLines(c(paste("Best parameters found"), paste0('Gamma: ', best_gamma), paste0('Lambda: ', best_lambda)))
   
   
   #Fitting final adaptive lasso using best lambda and best adaptive weights from cross validation
