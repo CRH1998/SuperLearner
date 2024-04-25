@@ -68,13 +68,20 @@ X_BreastCancer_test <- data.matrix(BreastCancer_test[,colnames(BreastCancer_test
 Y_BreastCancer_test <- ifelse(data.matrix(BreastCancer_test[,colnames(BreastCancer_test) == 'Class']) == "malignant", 1, 0)
 
 
+learner_list <- list(
+  SL.glmnet = list(alpha = 0.5, family = "binomial"),
+  SL.randomForest = list(ntree = 100, mtry = 3),
+  SL.gbm = list(n.trees = 500, interaction.depth = 3),
+  SL.adaptive.lasso = list(familiy = "binomial", regression_method = "ridge", nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1))
+)
+
 
 rr_BreastCancer         <- ridge_regression(X_BreastCancer_train, Y_BreastCancer_train, family = 'binomial')
 ols_BreastCancer        <- ols_regression(X_BreastCancer_train, Y_BreastCancer_train, family = 'binomial')
 adap_lasso_BreastCancer <- adaptive_lasso(X_BreastCancer_train, Y_BreastCancer_train, family = 'binomial', regression_method = 'ridge', 
                                   nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.05))
 SL_BreastCancer         <- SuperLearner(Y = Y_BreastCancer_train, X = data.frame(X_BreastCancer_train), newX = X_BreastCancer_test, family = 'binomial', 
-                                SL.library = c('SL.adaptive.lasso', 'SL.xgboost', 'SL.randomForest', 'SL.ksvm'))
+                                c('SL.adaptive.lasso', 'SL.xgboost', 'SL.randomForest', 'SL.ksvm'))
 
 
 rr_BreastCancer_pred <- predict(rr_BreastCancer, newx = X_BreastCancer_test, type = 'response') > 0.5
@@ -107,7 +114,7 @@ sum(SL_BreastCancer_pred == Y_BreastCancer_test)/length(SL_BreastCancer_pred)
 #         Heart surgery data          #
 #######################################
 
-heart_surgery <- read_csv("C:/Users/brf337/Desktop/Super Learner/Datasets/Heart disease/heart_statlog_cleveland_hungary_final.csv", 
+heart_surgery <- read_csv("Datasets/Heart disease/heart_statlog_cleveland_hungary_final.csv", 
                                                   col_types = cols(sex = col_factor(levels = c("0", "1")), 
                                                                    `chest pain type` = col_factor(levels = c("1", "2", "3", "4")), 
                                                                    `fasting blood sugar` = col_factor(levels = c("0", "1")), 
@@ -134,10 +141,18 @@ Y_heart_surgery_test <- as.numeric(heart_surgery_test[,colnames(heart_surgery_te
 
 rr_heart_surgery         <- ridge_regression(X_heart_surgery_train, Y_heart_surgery_train, family = 'binomial')
 ols_heart_surgery        <- ols_regression(X_heart_surgery_train, Y_heart_surgery_train, family = 'binomial')
-adap_lasso_heart_surgery <- adaptive_lasso(X_heart_surgery_train, Y_heart_surgery_train, family = 'binomial', regression_method = 'ols', 
+adap_lasso_heart_surgery <- adaptive_lasso(X_heart_surgery_train, Y_heart_surgery_train, family = 'binomial', regression_method = 'ridge', 
                                           nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.05))
+
+
+
+
+create_rf <- create.Learner("SL.randomForest", list(ntree = 1000))
+create_al <- create.Learner("SL.adaptive.lasso", list(regression_method = 'ridge'))
+
+
 SL_heart_surgery         <- SuperLearner(Y = Y_heart_surgery_train, X = data.frame(X_heart_surgery_train), newX = data.frame(X_heart_surgery_test), family = 'binomial', 
-                                        SL.library = c('SL.adaptive.lasso', 'SL.xgboost', 'SL.randomForest', 'SL.ksvm'))
+                                        SL.library = c(create_al$names, 'SL.xgboost', create_rf$names, 'SL.ksvm'))
 
 
 rr_heart_surgery_pred <- predict(rr_heart_surgery, newx = X_heart_surgery_test, type = 'response') > 0.5

@@ -187,14 +187,14 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     }
     
     
-    #Run cross validation with current adaptive weights and differenct lambda values
+    #Run cross validation with current adaptive weights and different lambda values
     cv.lasso <- cv.glmnet(x = X, y = Y, alpha = 1,
                           family = family,
                           lambda = lambda_seq,
                           nfolds = nfolds, parallel=TRUE, standardize=TRUE, 
                           penalty.factor = adaptive_weights)
     
-    #Storing cross validation result
+    #Store cross validation result
     cv_result_df <- rbind(cv_result_df, c(cv.lasso$lambda.min, gamma, min(cv.lasso$cvm)))
     
     
@@ -205,11 +205,11 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     
   }
   
-  #Renaming cv_result_df
+  #Rename cv_result_df
   colnames(cv_result_df) <- c("lambda.min", "gamma", "cvm")
   
   
-  #Retrieving best values from cross validation
+  #Retrieve best values from cross validation
   best_index <- which.min(cv_result_df$cvm)
   best_lambda <- cv_result_df$lambda.min[best_index]
   best_gamma <- cv_result_df$gamma[best_index]
@@ -219,17 +219,14 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   } else {
     best_adaptive_weights <- 1/(abs(initial_regression_coefs)^best_gamma)
   }
-  
-  
-  #writeLines("Cross validation done")
-  #writeLines(c(paste("Best parameters found"), paste0('Gamma: ', best_gamma), paste0('Lambda: ', best_lambda)))
-  
+
   
   #Fitting final adaptive lasso using best lambda and best adaptive weights from cross validation
   best_adaptive_lasso <- glmnet(x = X, y = Y, family = family, alpha = 1, 
                                 lambda = best_lambda, 
                                 penalty.factor = best_adaptive_weights,
                                 standardize = TRUE)
+  
   
   return(list("adaptive_lasso" = best_adaptive_lasso, 
               "initial_regression" = initial_regression, 
