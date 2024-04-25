@@ -135,7 +135,7 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
       
       # Extract coefficients from initial regression
       initial_regression_coefs <- coef(initial_regression)[-1]
-      #print(initial_regression_coefs)
+      
       
       writeLines("Done")
     } else if (regression_method == 'ridge'){
@@ -144,7 +144,7 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
       
       # Extract coefficients from initial regression
       initial_regression_coefs <- coef(initial_regression)[-1]
-      #print(initial_regression_coefs)
+      
       
       writeLines("Done")
     } else if (regression_method == 'adaptive_weights'){
@@ -153,9 +153,6 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
       stop("Invalid regression method. Choose between ols, ridge or adaptive_weights")
     }
   }
-  
-  #writeLines(paste0("Number of covariates: ", ncol(X)))
-  #writeLines(paste0("Number of estimated regression coefficients: ",length(initial_regression_coefs)))
   
   
   #----------------------------------------------------
