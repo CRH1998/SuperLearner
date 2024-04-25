@@ -29,8 +29,7 @@ library(readr)
 #-------------------Ridge regression--------------------------
 
 ridge_regression <- function(X, Y, 
-                             family = gaussian(), 
-                             lambda_seq = 10^seq(3, -3, by = -.1), 
+                             family = gaussian(),
                              seed = 1){
   set.seed(seed)
   
@@ -47,8 +46,7 @@ ridge_regression <- function(X, Y,
   # Apply cross validation to obtain best lambda value
   ridge_cv <- cv.glmnet(X, Y, 
                         alpha = 0, 
-                        family = family, 
-                        lambda = lambda_seq, 
+                        family = family,
                         standardize = TRUE) #standardize dataset
   
   
@@ -110,13 +108,11 @@ ols_regression <- function(X, Y, family = gaussian()){
 #' @param family family object for regression (family object)
 #' @param type.measure evaluation metric for cross validation (character)
 #' @param nfolds number of cross validation folds (double)
-#' @param lambda_seq sequence of lambda values for cross validation (double)
 #' @param gamma_seq sequence of gamma values for cross validation (double)
 #' @return adaptive lasso and key characteristics (list)
 
 adaptive_lasso <- function(X, Y, regression_method, family = gaussian(), 
-                           nfolds = 10, lambda_seq = 1.5^seq(3, -3, by = -.1), 
-                           gamma_seq = seq(0.1,5,0.25), seed = 1,...){
+                           nfolds = 10, gamma_seq = seq(0.1,5,0.25), seed = 1,...){
   
   set.seed(seed)
   
@@ -165,9 +161,7 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
   
   
   
-  writeLines(paste0("Running ", nfolds,"-fold cross validation to tune gamma and lambda parameter in adaptive lasso for ", 
-                    length(gamma_seq), ' x ', length(lambda_seq),' = ',
-                    length(gamma_seq) * length(lambda_seq), ' different parameter combinations'))
+  writeLines(paste0("Running ", nfolds,"-fold cross validation to tune gamma and lambda parameter in adaptive lasso"))
   
   
   
@@ -190,7 +184,6 @@ adaptive_lasso <- function(X, Y, regression_method, family = gaussian(),
     #Run cross validation with current adaptive weights and different lambda values
     cv.lasso <- cv.glmnet(x = X, y = Y, alpha = 1,
                           family = family,
-                          lambda = lambda_seq,
                           nfolds = nfolds, parallel=TRUE, standardize=TRUE, 
                           penalty.factor = adaptive_weights)
     
