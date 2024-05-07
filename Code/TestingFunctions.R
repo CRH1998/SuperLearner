@@ -21,8 +21,7 @@ Y_boston_test <- data.matrix(Boston_test[,colnames(Boston_test) == 'medv'])
 
 rr_boston <- ridge_regression(X_boston_train, Y_boston_train)
 ols_boston <- ols_regression(X_boston_train, Y_boston_train)
-adap_lasso_boston <- adaptive_lasso(X_boston_train, Y_boston_train, regression_method = 'adaptive_weights', 
-                                    lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.25))
+adap_lasso_boston <- adaptive_lasso(X_boston_train, Y_boston_train, regression_method = 'adaptive_weights', gamma_seq = seq(0.01,5,0.25))
 SL_boston <- SuperLearner(Y = Y_boston_train, X = data.frame(X_boston_train), newX = X_boston_test, family = gaussian(),
              SL.library = c('SL.ridge', 'SL.adaptive.lasso', 'SL.xgboost', 'SL.lm'))
 
@@ -68,18 +67,10 @@ X_BreastCancer_test <- data.matrix(BreastCancer_test[,colnames(BreastCancer_test
 Y_BreastCancer_test <- ifelse(data.matrix(BreastCancer_test[,colnames(BreastCancer_test) == 'Class']) == "malignant", 1, 0)
 
 
-learner_list <- list(
-  SL.glmnet = list(alpha = 0.5, family = "binomial"),
-  SL.randomForest = list(ntree = 100, mtry = 3),
-  SL.gbm = list(n.trees = 500, interaction.depth = 3),
-  SL.adaptive.lasso = list(familiy = "binomial", regression_method = "ridge", nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1))
-)
-
-
 rr_BreastCancer         <- ridge_regression(X_BreastCancer_train, Y_BreastCancer_train, family = 'binomial')
 ols_BreastCancer        <- ols_regression(X_BreastCancer_train, Y_BreastCancer_train, family = 'binomial')
 adap_lasso_BreastCancer <- adaptive_lasso(X_BreastCancer_train, Y_BreastCancer_train, family = 'binomial', regression_method = 'ridge', 
-                                  nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.05))
+                                  nfolds = 10, gamma_seq = seq(0.01,5,0.05))
 SL_BreastCancer         <- SuperLearner(Y = Y_BreastCancer_train, X = data.frame(X_BreastCancer_train), newX = X_BreastCancer_test, family = 'binomial', 
                                 c('SL.adaptive.lasso', 'SL.xgboost', 'SL.randomForest', 'SL.ksvm'))
 
@@ -142,11 +133,11 @@ Y_heart_surgery_test <- as.numeric(heart_surgery_test[,colnames(heart_surgery_te
 rr_heart_surgery         <- ridge_regression(X_heart_surgery_train, Y_heart_surgery_train, family = 'binomial')
 ols_heart_surgery        <- ols_regression(X_heart_surgery_train, Y_heart_surgery_train, family = 'binomial')
 adap_lasso_heart_surgery <- adaptive_lasso(X_heart_surgery_train, Y_heart_surgery_train, family = 'binomial', regression_method = 'ridge', 
-                                          nfolds = 10, lambda_seq = 10^seq(5, -5, by = -.1), gamma_seq = seq(0.01,5,0.05))
+                                          nfolds = 10, gamma_seq = seq(0.01,5,0.05))
 
 
 
-
+#Create learners with specific settings
 create_rf <- create.Learner("SL.randomForest", list(ntree = 1000))
 create_al <- create.Learner("SL.adaptive.lasso", list(regression_method = 'ridge'))
 
@@ -180,6 +171,61 @@ sum(SL_heart_surgery_pred == Y_heart_surgery_test)/length(SL_heart_surgery_pred)
 
 
 
+
+
+
+
+
+
+
+
+
+
+#######################################
+#             Genotype data           #
+#######################################
+
+load(url("https://www.biostatistics.dk/teaching/advtopicsA/data/lassodata.rda"))
+
+
+#Genotype is a matrix of 228 genotypes for 2000 individuals
+#Phenotype is the outcome for the 2000 individuals
+
+
+#use 70% of dataset as training set and 30% as test set
+sample_genotype   <- sample(c(TRUE, FALSE), nrow(genotype), replace=TRUE, prob=c(0.7,0.3))
+X_genotype_train  <- genotype[sample_genotype, ]
+Y_genotype_train <- phenotype[sample_genotype]
+X_genotype_test   <- genotype[!sample_genotype, ]
+Y_genotype_test  <- phenotype[!sample_genotype]
+
+
+rr_genotype         <- ridge_regression(X_genotype_train, Y_genotype_train, family = 'binomial')
+ols_genotype        <- ols_regression(X_genotype_train, Y_genotype_train, family = 'binomial')
+adap_lasso_genotype <- adaptive_lasso(X_genotype_train, Y_genotype_train, family = 'binomial', regression_method = 'adaptive_weights', 
+                                           nfolds = 5, gamma_seq = seq(0.5,5,0.1), CV = T)
+
+
+
+#Create learners with specific settings
+create_al <- create.Learner("SL.adaptive.lasso", list(regression_method = 'adaptive_weights', CV = F, gamma = 1, lambda = 0.0223515690767809))
+
+
+SL_genotype         <- SuperLearner(Y = Y_genotype_train, X = data.frame(X_genotype_train), newX = data.frame(X_genotype_test), family = 'binomial', 
+                                         SL.library = c(create_al$names, 'SL.xgboost', 'SL.ksvm'))
+
+
+
+rr_genotype_pred <- predict(rr_genotype, newx = X_genotype_test, type = 'response') > 0.5
+ols_genotype_pred <- predict(ols_genotype, newdata = as.data.frame(X_genotype_test), type = 'response') > 0.5
+adap_lasso_genotype_pred <- predict(adap_lasso_genotype$adaptive_lasso, newx = X_genotype_test, type = 'response') > 0.5
+SL_genotype_pred <- SL_genotype$SL.predict > 0.5
+
+
+sum(rr_genotype_pred == Y_genotype_test)/length(rr_genotype_pred)
+sum(ols_genotype_pred == Y_genotype_test)/length(ols_genotype_pred)
+sum(adap_lasso_genotype_pred == Y_genotype_test)/length(adap_lasso_genotype_pred)
+sum(SL_genotype_pred == Y_genotype_test)/length(SL_genotype_pred)
 
 
 
