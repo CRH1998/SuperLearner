@@ -1,25 +1,24 @@
-library(glmnet)
-library(mlbench)
-library(caret)
-library(xgboost)
-library(mltools)
-library(data.table)
-library(tidyverse)
-library(xgboost)
-library(MESS)
-library(MASS)
-library(kernlab)
-library(readr)
+#----------------Reading relevant libraries----------------
+
+library(mlbench)    # Machine learning benchmark for testing functions
+
+library(caret)      # For data processing
+library(mltools)    # For data processing
+library(data.table) # For data processing
+library(tidyverse)  # For data processing
+library(readr)      # For data processing
+
+library(glmnet)     # For lasso and ridge 
+library(xgboost)    # For xgboost
+
+library(MESS)       # For adaptive weights
+library(MASS)       # For datasets
+
+library(kernlab)    # For kernel based machine learning
 
 
 ###########################################
 #       R code for Adaptive Lasso         #
-#                                         #
-#                                         #
-#                                         #
-#                                         #
-#                                         #
-#                                         #
 #                                         #
 #                                         #
 ###########################################

@@ -1,7 +1,5 @@
 #Loading relevant packages
 library(SuperLearner)
-library(caret)
-library(glmnet)
 library(randomForest)
 library(ggplot2)
 library(tidyr)
@@ -24,6 +22,26 @@ library(tidyr)
 #           Adaptive lasso for SuperLearner package          #
 ##############################################################
 
+#' Title
+#'
+#' @param Y Vector. Target variable.
+#' @param X Data frame. Training data set
+#' @param newX Data frame. Test data set
+#' @param family Family type function.
+#' @param regression_method Character. Method for obtaining weights: 'ols', 'ridge' or 'adaptive_weights'
+#' @param predict_type Character. Prediction type
+#' @param CV Boolean. Cross-validate to tune hyperparameters in adaptive.lasso fit.
+#' @param gamma Numerical. Specify gamma value
+#' @param lambda Numerical. Specify lambda value
+#' @param nfolds Integer. Number of cross-validations
+#' @param gamma_seq Vector. Gamma values for cross-validation. 
+#' @param seed Set seed
+#' @param ... other parameters
+#'
+#' @return Adaptive lasso fit for SuperLearner() and its predictions
+#' @export 
+#'
+#' @examples
 SL.adaptive.lasso <- function(Y, X, newX, family = gaussian(), regression_method = 'ols',
                               predict_type = 'response',
                               CV = T, gamma = 1, lambda = 1,

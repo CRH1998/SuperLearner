@@ -208,7 +208,7 @@ adap_lasso_genotype <- adaptive_lasso(X_genotype_train, Y_genotype_train, family
 
 
 #Create learners with specific settings
-create_al <- create.Learner("SL.adaptive.lasso", list(regression_method = 'adaptive_weights', CV = F, gamma = 1, lambda = 0.0223515690767809))
+create_al <- create.Learner("SL.adaptive.lasso", list(regression_method = 'adaptive_weights', CV = F, gamma = 1.9, lambda = 0.1441369))
 
 
 SL_genotype         <- SuperLearner(Y = Y_genotype_train, X = data.frame(X_genotype_train), newX = data.frame(X_genotype_test), family = 'binomial', 
